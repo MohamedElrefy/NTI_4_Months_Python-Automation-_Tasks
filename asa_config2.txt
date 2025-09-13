@@ -1,0 +1,27 @@
+!
+hostname ASA-FW2
+!
+interface GigabitEthernet0/0
+ nameif outside
+ security-level 0
+ ip address 198.51.100.1 255.255.255.0
+!
+interface GigabitEthernet0/1
+ nameif inside
+ security-level 100
+ ip address 10.10.10.1 255.255.255.0
+!
+object network MAIL-SERVER
+ host 10.10.10.5
+object network DNS-SERVER
+ host 10.10.10.53
+object network NTP-SERVER
+ host 10.10.10.123
+!
+access-list OUTSIDE-IN extended permit tcp any host 10.10.10.5 eq 25
+access-list OUTSIDE-IN extended permit tcp any host 10.10.10.5 eq 587
+access-list OUTSIDE-IN extended permit udp any host 10.10.10.53 eq 53
+access-list OUTSIDE-IN extended permit udp any host 10.10.10.123 eq 123
+!
+route outside 0.0.0.0 0.0.0.0 198.51.100.254
+route inside 172.16.0.0 255.255.0.0 10.10.10.254
