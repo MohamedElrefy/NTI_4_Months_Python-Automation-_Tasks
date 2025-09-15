@@ -6,6 +6,11 @@ parser.add_argument("-i","--input",type=str,required=True)
 parser.add_argument("-f",action="store_true")
 args =parser.parse_args()
 
+def nameif(input):
+   nameif_regex=r"interface\sGigabitEthernet\d+\/\d+\n\snameif\s(inside|outside)\n"
+   nameif_out=re.findall(nameif_regex,input)
+   return nameif_out
+  
 def interfaces_info(input):
     interface_config=[]
     interfaces_regex=r"interface\sGigabitEthernet0\/(\d)\n\snameif\s(inside|outside)\n.*\n\s+ip\saddress\s(\d+\.\d+\.\d+\.\d+)\s(\d+\.\d+\.\d+\.\d+)"
@@ -42,26 +47,33 @@ def acess_list(input):
    list_configs=[]
    list_regex=r"access-list\s+(.*)\sextended.*host\s(\d+\.\d+\.\d+\.\d+)\s(?:eq\s+(\d+))?"
    lists=re.findall(list_regex,input)
-   for list in lists:
-     if list[2].strip()== "80":
-       list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-http"
-     elif list[2].strip()== "443":
-       list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-https"
-     elif list[2].strip()== "22":
-       list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-ssh"
-     elif list[2].strip()== "25":
-       list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-smtp"
-     elif list[2].strip()== "587":
-       list_conf=f"set applications application smtp-submission protocol tcp destination-port 587\nset security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application smtp-submission" 
-     elif list[2].strip()== "53":
-       list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-dns-udp"
-     elif list[2].strip()== "123":
-       list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-ntp" 
-     elif list[2].strip()== "":
-        list_conf=f"set security policies from-zone untrust to-zone trust policy {list[0]} match source-address any destination-address {list[1]} application junos-icmp"
-     else:
-        print("This is undefined port yet")
-     list_configs.append(list_conf)
+   for inter in nameif(input):
+     if inter.strip()=="inside":
+        zone="trust"
+     elif inter.strip()=="outside":
+        zone="untrust"
+     else: 
+       print("undefined zone")      
+     for list in lists:
+       if list[2].strip()== "80":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-http"
+       elif list[2].strip()== "443":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-https"
+       elif list[2].strip()== "22":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-ssh"
+       elif list[2].strip()== "25":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-smtp"
+       elif list[2].strip()== "587":
+         list_conf=f"set applications application smtp-submission protocol tcp destination-port 587\nset security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application smtp-submission" 
+       elif list[2].strip()== "53":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-dns-udp"
+       elif list[2].strip()== "123":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-ntp" 
+       elif list[2].strip()== "":
+         list_conf=f"set security policies from-zone untrust to-zone {zone} policy {list[0]} match source-address any destination-address {list[1]} application junos-icmp"
+       else:
+         print("This is undefined port yet")
+       list_configs.append(list_conf)
    return f"{"\n".join(list_configs)}\n"
 
 def route(input):
